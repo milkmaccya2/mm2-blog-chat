@@ -12,6 +12,7 @@ interface Env {
 const ALLOWED_ORIGINS = [
   'https://blog.milkmaccya.com',
   /^https:\/\/.*-mm2-blog\.milkmaccya2\.workers\.dev$/,
+  /^http:\/\/localhost:\d+$/,
 ];
 
 function getAllowedOrigin(request: Request): string | null {
