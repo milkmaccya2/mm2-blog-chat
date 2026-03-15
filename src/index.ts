@@ -82,7 +82,7 @@ export default {
             system: SYSTEM_PROMPT,
             messages: modelMessages,
             tools: createTools(env),
-            stopWhen: stepCountIs(2),
+            stopWhen: stepCountIs(5),
             onStepFinish: ({ toolResults }) => {
               for (const toolResult of toolResults) {
                 if (toolResult.dynamic) continue;
