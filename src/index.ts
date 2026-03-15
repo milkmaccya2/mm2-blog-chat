@@ -87,13 +87,16 @@ export default {
               for (const toolResult of toolResults) {
                 if (toolResult.dynamic) continue;
                 if (toolResult.toolName === 'search_blog') {
-                  for (const source of toolResult.output.sources) {
-                    writer.write({
-                      type: 'source-url',
-                      sourceId: source.url,
-                      url: source.url,
-                      title: source.title,
-                    });
+                  const sources = toolResult.output?.sources;
+                  if (Array.isArray(sources)) {
+                    for (const source of sources) {
+                      writer.write({
+                        type: 'source-url',
+                        sourceId: source.url,
+                        url: source.url,
+                        title: source.title,
+                      });
+                    }
                   }
                 }
               }

@@ -10,6 +10,10 @@ export function createTools(env: { AI: Ai; VECTORIZE: VectorizeIndex }) {
       inputSchema: z.object({
         query: z.string().describe('検索クエリ（日本語）'),
       }),
+      outputSchema: z.object({
+        context: z.string(),
+        sources: z.array(z.object({ url: z.string(), title: z.string() })),
+      }),
       execute: async ({ query }) => {
         const results = await searchRelevantChunks(query, env.AI, env.VECTORIZE);
         return {
