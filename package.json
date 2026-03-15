@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.58",
-    "ai": "^6.0.116"
+    "ai": "^6.0.116",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.6",

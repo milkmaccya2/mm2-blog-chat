@@ -3,11 +3,12 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
+  stepCountIs,
   streamText,
   type UIMessage,
 } from 'ai';
-import { formatContext, type RagResult, searchRelevantChunks } from './rag';
-import { buildPromptWithContext } from './system-prompt';
+import { SYSTEM_PROMPT } from './system-prompt';
+import { createTools } from './tools';
 
 interface Env {
   AI: Ai;
@@ -68,24 +69,6 @@ export default {
     const { messages }: { messages: UIMessage[] } = await request.json();
     const modelMessages = await convertToModelMessages(messages);
 
-    const lastUserMessage = messages.findLast((m) => m.role === 'user');
-
-    let context = '';
-    let ragResults: RagResult[] = [];
-    if (lastUserMessage) {
-      try {
-        const userText =
-          lastUserMessage.parts
-            ?.filter((p) => p.type === 'text')
-            .map((p) => p.text)
-            .join('') ?? '';
-        ragResults = await searchRelevantChunks(userText, env.AI, env.VECTORIZE);
-        context = formatContext(ragResults);
-      } catch (e) {
-        console.error('RAG search failed:', e);
-      }
-    }
-
     const anthropic = createAnthropic({
       apiKey: env.ANTHROPIC_API_KEY,
     });
@@ -94,21 +77,27 @@ export default {
       headers: corsHeaders(origin),
       stream: createUIMessageStream({
         execute: ({ writer }) => {
-          for (const r of ragResults) {
-            if (r.url) {
-              writer.write({
-                type: 'source-url',
-                sourceId: r.url,
-                url: r.url,
-                title: r.title,
-              });
-            }
-          }
-
           const result = streamText({
             model: anthropic('claude-sonnet-4-20250514'),
-            system: buildPromptWithContext(context),
+            system: SYSTEM_PROMPT,
             messages: modelMessages,
+            tools: createTools(env),
+            stopWhen: stepCountIs(2),
+            onStepFinish: ({ toolResults }) => {
+              for (const toolResult of toolResults) {
+                if (toolResult.dynamic) continue;
+                if (toolResult.toolName === 'search_blog') {
+                  for (const source of toolResult.output.sources) {
+                    writer.write({
+                      type: 'source-url',
+                      sourceId: source.url,
+                      url: source.url,
+                      title: source.title,
+                    });
+                  }
+                }
+              }
+            },
           });
 
           writer.merge(result.toUIMessageStream());
