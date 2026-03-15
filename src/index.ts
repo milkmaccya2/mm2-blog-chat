@@ -77,6 +77,7 @@ export default {
       headers: corsHeaders(origin),
       stream: createUIMessageStream({
         execute: ({ writer }) => {
+          const sentSourceUrls = new Set<string>();
           const result = streamText({
             model: anthropic('claude-sonnet-4-20250514'),
             system: SYSTEM_PROMPT,
@@ -90,6 +91,8 @@ export default {
                   const sources = toolResult.output?.sources;
                   if (Array.isArray(sources)) {
                     for (const source of sources) {
+                      if (sentSourceUrls.has(source.url)) continue;
+                      sentSourceUrls.add(source.url);
                       writer.write({
                         type: 'source-url',
                         sourceId: source.url,
