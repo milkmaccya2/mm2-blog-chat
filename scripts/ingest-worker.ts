@@ -40,6 +40,7 @@ export default {
           section: chunk.section ?? '',
           url: chunk.url ?? '',
           date: chunk.date ?? '',
+          dateNum: chunk.date ? Number(chunk.date.replace(/-/g, '')) : 0,
         },
       }));
 
