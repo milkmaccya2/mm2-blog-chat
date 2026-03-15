@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { EMBEDDING_MODEL } from '../constants';
 import { formatContext, type RagResult, searchRelevantChunks } from '../rag';
 
 describe('formatContext', () => {
@@ -100,7 +101,7 @@ describe('searchRelevantChunks', () => {
     const vectorize = createMockVectorize([]);
     await searchRelevantChunks('my search', mockAi, vectorize);
 
-    expect(mockAi.run).toHaveBeenCalledWith('@cf/baai/bge-m3', { text: ['my search'] });
+    expect(mockAi.run).toHaveBeenCalledWith(EMBEDDING_MODEL, { text: ['my search'] });
   });
 
   it('handles matches without metadata gracefully', async () => {
