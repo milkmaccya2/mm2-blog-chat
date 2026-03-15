@@ -32,9 +32,9 @@ export async function searchRelevantChunks(
   if (recentOnly) {
     const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000);
     const dateNum =
-      fourWeeksAgo.getFullYear() * 10000 +
-      (fourWeeksAgo.getMonth() + 1) * 100 +
-      fourWeeksAgo.getDate();
+      fourWeeksAgo.getUTCFullYear() * 10000 +
+      (fourWeeksAgo.getUTCMonth() + 1) * 100 +
+      fourWeeksAgo.getUTCDate();
     filter.dateNum = { $gte: dateNum };
   }
 
