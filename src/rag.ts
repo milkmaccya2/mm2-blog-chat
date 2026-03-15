@@ -26,6 +26,9 @@ export async function searchRelevantChunks(
     text: [query],
   });
 
+  if (!('data' in embedding) || !embedding.data) {
+    throw new Error('Unexpected embedding response format');
+  }
   const queryVector = embedding.data[0];
 
   const filter: VectorizeVectorMetadataFilter = {};
