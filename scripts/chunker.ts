@@ -90,5 +90,6 @@ export function createAboutChunks(): Chunk[] {
     source: 'about' as const,
     title: 'About milkmaccya',
     section: s.section,
+    url: 'https://blog.milkmaccya.com/about/',
   }));
 }

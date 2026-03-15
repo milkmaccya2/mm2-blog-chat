@@ -1,5 +1,5 @@
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import {
   type Chunk,
   chunkByParagraphs,
@@ -8,29 +8,48 @@ import {
 } from './chunker';
 import { fetchNoteArticles } from './note-fetcher';
 
-const BLOG_DIR = process.env.BLOG_DIR ?? join(process.cwd(), '../mm2-blog/src/content/blog/weekly');
+const BLOG_BASE = process.env.BLOG_DIR ?? join(process.cwd(), '../mm2-blog/src/content/blog');
+const BLOG_ORIGIN = 'https://blog.milkmaccya.com';
+
+function collectMarkdownFiles(dir: string): string[] {
+  const entries = readdirSync(dir);
+  const files: string[] = [];
+  for (const entry of entries) {
+    const fullPath = join(dir, entry);
+    if (statSync(fullPath).isDirectory()) {
+      files.push(...collectMarkdownFiles(fullPath));
+    } else if (entry.endsWith('.md')) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
 
 async function loadBlogChunks(): Promise<Chunk[]> {
-  const files = readdirSync(BLOG_DIR).filter((f) => f.endsWith('.md'));
+  const files = collectMarkdownFiles(BLOG_BASE);
   const chunks: Chunk[] = [];
 
-  for (const file of files) {
-    const content = readFileSync(join(BLOG_DIR, file), 'utf-8');
-    const dateMatch = file.match(/(\d{4}-\d{2}-\d{2})/);
+  for (const filePath of files) {
+    const content = readFileSync(filePath, 'utf-8');
+    const dateMatch = filePath.match(/(\d{4}-\d{2}-\d{2})/);
     if (!dateMatch) {
-      console.warn(`Skipping file without date in filename: ${file}`);
+      console.warn(`Skipping file without date in filename: ${filePath}`);
       continue;
     }
     const date = dateMatch[1];
 
     const titleMatch = content.match(/title:\s*['"](.+?)['"]/);
-    const title = titleMatch?.[1] ?? file.replace('.md', '');
+    const title = titleMatch?.[1] ?? filePath.replace('.md', '');
+
+    const slug = relative(BLOG_BASE, filePath).replace(/\.md$/, '');
+    const url = `${BLOG_ORIGIN}/blog/${slug}`;
 
     const blogChunks = chunkMarkdownBySections(content, {
       source: 'blog',
       title,
       date,
-      idPrefix: `blog:${date}`,
+      url,
+      idPrefix: `blog:${slug}`,
     });
     chunks.push(...blogChunks);
   }
