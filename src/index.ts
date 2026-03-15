@@ -1,6 +1,12 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
-import { convertToModelMessages, streamText, type UIMessage } from 'ai';
-import { formatContext, searchRelevantChunks } from './rag';
+import {
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  streamText,
+  type UIMessage,
+} from 'ai';
+import { formatContext, type RagResult, searchRelevantChunks } from './rag';
 import { buildPromptWithContext } from './system-prompt';
 
 interface Env {
@@ -65,6 +71,7 @@ export default {
     const lastUserMessage = messages.findLast((m) => m.role === 'user');
 
     let context = '';
+    let ragResults: RagResult[] = [];
     if (lastUserMessage) {
       try {
         const userText =
@@ -72,8 +79,8 @@ export default {
             ?.filter((p) => p.type === 'text')
             .map((p) => p.text)
             .join('') ?? '';
-        const results = await searchRelevantChunks(userText, env.AI, env.VECTORIZE);
-        context = formatContext(results);
+        ragResults = await searchRelevantChunks(userText, env.AI, env.VECTORIZE);
+        context = formatContext(ragResults);
       } catch (e) {
         console.error('RAG search failed:', e);
       }
@@ -83,24 +90,30 @@ export default {
       apiKey: env.ANTHROPIC_API_KEY,
     });
 
-    const result = streamText({
-      model: anthropic('claude-sonnet-4-20250514'),
-      system: buildPromptWithContext(context),
-      messages: modelMessages,
-    });
+    return createUIMessageStreamResponse({
+      headers: corsHeaders(origin),
+      stream: createUIMessageStream({
+        execute: ({ writer }) => {
+          for (const r of ragResults) {
+            if (r.source) {
+              writer.write({
+                type: 'source-url',
+                sourceId: r.source,
+                url: r.source,
+                title: r.title,
+              });
+            }
+          }
 
-    const response = result.toUIMessageStreamResponse();
+          const result = streamText({
+            model: anthropic('claude-sonnet-4-20250514'),
+            system: buildPromptWithContext(context),
+            messages: modelMessages,
+          });
 
-    // Add CORS headers to the streaming response
-    const newHeaders = new Headers(response.headers);
-    for (const [key, value] of Object.entries(corsHeaders(origin))) {
-      newHeaders.set(key, value);
-    }
-
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: newHeaders,
+          writer.merge(result.toUIMessageStream());
+        },
+      }),
     });
   },
 };
