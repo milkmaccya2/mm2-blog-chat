@@ -26,8 +26,8 @@ export async function searchRelevantChunks(
     text: [query],
   });
 
-  if (!('data' in embedding) || !embedding.data) {
-    throw new Error('Unexpected embedding response format');
+  if (!('data' in embedding) || !Array.isArray(embedding.data) || embedding.data.length === 0) {
+    throw new Error('Unexpected embedding response format or empty data');
   }
   const queryVector = embedding.data[0];
 
