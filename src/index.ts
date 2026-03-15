@@ -9,13 +9,13 @@ interface Env {
   ANTHROPIC_API_KEY: string;
 }
 
-const ALLOWED_ORIGINS = [
+export const ALLOWED_ORIGINS = [
   'https://blog.milkmaccya.com',
   /^https:\/\/.*-mm2-blog\.milkmaccya2\.workers\.dev$/,
   /^http:\/\/localhost:\d+$/,
 ];
 
-function getAllowedOrigin(request: Request): string | null {
+export function getAllowedOrigin(request: Request): string | null {
   const origin = request.headers.get('Origin');
   if (!origin) return null;
   for (const allowed of ALLOWED_ORIGINS) {
@@ -26,7 +26,7 @@ function getAllowedOrigin(request: Request): string | null {
   return null;
 }
 
-function corsHeaders(origin: string): HeadersInit {
+export function corsHeaders(origin: string): HeadersInit {
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
