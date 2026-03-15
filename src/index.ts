@@ -95,11 +95,11 @@ export default {
       stream: createUIMessageStream({
         execute: ({ writer }) => {
           for (const r of ragResults) {
-            if (r.source) {
+            if (r.url) {
               writer.write({
                 type: 'source-url',
-                sourceId: r.source,
-                url: r.source,
+                sourceId: r.url,
+                url: r.url,
                 title: r.title,
               });
             }

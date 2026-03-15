@@ -4,6 +4,7 @@ export interface RagResult {
   text: string;
   source: string;
   title: string;
+  url: string;
   score: number;
 }
 
@@ -24,12 +25,20 @@ export async function searchRelevantChunks(
     returnMetadata: 'all',
   });
 
-  return results.matches.map((match) => ({
-    text: (match.metadata?.text as string) ?? '',
-    source: (match.metadata?.source as string) ?? '',
-    title: (match.metadata?.title as string) ?? '',
-    score: match.score,
-  }));
+  return results.matches.map((match) => {
+    const source = (match.metadata?.source as string) ?? '';
+    const url = (match.metadata?.url as string) ?? '';
+    const date = (match.metadata?.date as string) ?? '';
+
+    return {
+      text: (match.metadata?.text as string) ?? '',
+      source,
+      title: (match.metadata?.title as string) ?? '',
+      url:
+        url || (source === 'blog' && date ? `https://blog.milkmaccya.com/blog/weekly/${date}` : ''),
+      score: match.score,
+    };
+  });
 }
 
 export function formatContext(results: RagResult[]): string {
