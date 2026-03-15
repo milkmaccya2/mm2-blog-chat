@@ -1,8 +1,8 @@
 // npx wrangler dev scripts/ingest-worker.ts --remote で実行
 // チャンクJSONを受け取り、embedding + Vectorize upsertを行う
 
-import type { Chunk } from './chunker';
 import { EMBEDDING_MODEL } from '../src/constants';
+import type { Chunk } from './chunker';
 
 export interface Env {
   AI: Ai;
