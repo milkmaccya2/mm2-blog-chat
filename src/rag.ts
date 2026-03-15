@@ -4,6 +4,7 @@ export interface RagResult {
   text: string;
   source: string;
   title: string;
+  url: string;
   score: number;
 }
 
@@ -28,6 +29,7 @@ export async function searchRelevantChunks(
     text: (match.metadata?.text as string) ?? '',
     source: (match.metadata?.source as string) ?? '',
     title: (match.metadata?.title as string) ?? '',
+    url: (match.metadata?.url as string) ?? '',
     score: match.score,
   }));
 }
