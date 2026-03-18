@@ -41,4 +41,4 @@ Allowed origins: `https://blog.milkmaccya.com` and `*-mm2-blog.milkmaccya2.worke
 
 ## Git Branching
 
-Create topic branches from `master`. Never commit directly to `master`.
+Create topic branches from `main`. Never commit directly to `main`.
