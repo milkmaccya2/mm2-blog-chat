@@ -38,18 +38,21 @@ graph LR
 
 ```text
 ├── src/
-│   ├── index.ts          # POST /chat エンドポイント (CORS対応)
-│   ├── rag.ts            # Vectorize検索 + コンテキスト生成
-│   ├── system-prompt.ts  # LLMシステムプロンプト
-│   └── constants.ts      # Embeddingモデル定数
+│   ├── index.ts            # POST /chat, POST /ingest エンドポイント (CORS対応)
+│   ├── ingest-handler.ts   # /ingest 処理 (embedding + Vectorize upsert)
+│   ├── rag.ts              # Vectorize検索 + コンテキスト生成
+│   ├── system-prompt.ts    # LLMシステムプロンプト
+│   ├── types.ts            # 共有型定義 (Chunk)
+│   └── constants.ts        # Embeddingモデル定数
 ├── scripts/
-│   ├── chunker.ts        # Markdownチャンク分割
-│   ├── ingest.ts         # ブログ記事→チャンクJSON生成
-│   ├── ingest-worker.ts  # embedding + Vectorize upsert Worker
-│   ├── note-fetcher.ts   # note.com記事取得
-│   └── wrangler-ingest.json  # ingest Worker用wrangler設定
-├── wrangler.json         # メインWorker設定
-├── biome.json            # Biome設定（Lint/Format）
+│   ├── chunker.ts          # Markdownチャンク分割
+│   ├── ingest.ts           # ブログ記事→チャンクJSON生成
+│   ├── note-fetcher.ts     # note.com記事取得
+│   └── wrangler-ingest.json  # (旧) ingest Worker用wrangler設定
+├── .github/workflows/
+│   └── ingest.yml          # Ingest自動実行ワークフロー
+├── wrangler.json           # メインWorker設定
+├── biome.json              # Biome設定（Lint/Format）
 └── package.json
 ```
 
@@ -72,20 +75,45 @@ echo "ANTHROPIC_API_KEY=sk-ant-your-api-key-here" > .dev.vars
 | 変数名 | 説明 |
 | :--- | :--- |
 | `ANTHROPIC_API_KEY` | Anthropic APIキー (`wrangler secret put` で設定) |
+| `INGEST_SECRET` | `/ingest` エンドポイントの認証トークン (`wrangler secret put` で設定) |
 
 ## データ取り込み (Ingest)
 
-ブログ記事をVectorizeにインデックスする手順:
+ブログ記事のチャンク生成 → embedding → Vectorize upsert までを自動化しています。
+
+### 自動実行 (GitHub Actions)
+
+`.github/workflows/ingest.yml` により以下のタイミングで自動実行されます:
+
+- **手動**: GitHub Actions の「Run workflow」ボタン
+- **自動**: mm2-blog リポジトリから `repository_dispatch` イベント (`blog-updated`) を送信
+
+#### 初回セットアップ
 
 ```bash
-# 1. チャンクJSONを生成 (ブログリポのパスを指定)
-BLOG_DIR=../mm2-blog/src/content/blog/weekly npm run ingest:prepare
+# シークレット生成 & Cloudflare Workers に設定
+openssl rand -hex 32 | tee /tmp/ingest_secret.txt | npx wrangler secret put INGEST_SECRET
 
-# 2. ingest Workerをローカル起動 (--remote でVectorizeに接続)
-npx wrangler dev scripts/ingest-worker.ts -c scripts/wrangler-ingest.json --remote
+# 同じ値を GitHub Secrets に設定 (Actions から /ingest を叩くために必要)
+gh secret set INGEST_SECRET < /tmp/ingest_secret.txt
 
-# 3. チャンクをアップロード
-curl -X POST http://localhost:8787 -H "Content-Type: application/json" -d @/tmp/chunks.json
+rm /tmp/ingest_secret.txt
+
+# デプロイ
+npm run deploy
+```
+
+### ローカル手動実行
+
+```bash
+# 1. チャンクJSONを生成
+BLOG_DIR=../mm2-blog/src/content/blog npm run ingest:prepare
+
+# 2. デプロイ済みエンドポイントにアップロード
+curl -X POST https://chat.milkmaccya.com/ingest \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <INGEST_SECRET>" \
+  -d @/tmp/chunks.json
 ```
 
 ## CORS
