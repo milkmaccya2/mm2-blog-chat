@@ -6,7 +6,7 @@ interface IngestEnv {
   VECTORIZE: VectorizeIndex;
 }
 
-const BATCH_SIZE = 100;
+const BATCH_SIZE = 20;
 
 export async function handleIngest(request: Request, env: IngestEnv): Promise<Response> {
   const body = await request.json();
@@ -18,40 +18,46 @@ export async function handleIngest(request: Request, env: IngestEnv): Promise<Re
 
   let upserted = 0;
 
-  for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
-    const batch = chunks.slice(i, i + BATCH_SIZE);
-    const texts = batch.map((c) => c.text);
+  try {
+    for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+      const batch = chunks.slice(i, i + BATCH_SIZE);
+      const texts = batch.map((c) => c.text);
 
-    const embeddings = await env.AI.run(EMBEDDING_MODEL, { text: texts });
+      const embeddings = await env.AI.run(EMBEDDING_MODEL, { text: texts });
 
-    if (
-      !('data' in embeddings) ||
-      !Array.isArray(embeddings.data) ||
-      embeddings.data.length === 0
-    ) {
-      return Response.json(
-        { success: false, upserted, error: 'Unexpected embedding response format' },
-        { status: 502 }
-      );
+      if (
+        !('data' in embeddings) ||
+        !Array.isArray(embeddings.data) ||
+        embeddings.data.length === 0
+      ) {
+        return Response.json(
+          { success: false, upserted, error: 'Unexpected embedding response format' },
+          { status: 502 }
+        );
+      }
+
+      const vectors = batch.map((chunk, idx) => ({
+        id: chunk.id,
+        values: embeddings.data[idx],
+        metadata: {
+          text: chunk.text,
+          source: chunk.source,
+          title: chunk.title,
+          section: chunk.section ?? '',
+          url: chunk.url ?? '',
+          date: chunk.date ?? '',
+          dateNum: chunk.date ? Number(chunk.date.replace(/-/g, '')) : 0,
+        },
+      }));
+
+      await env.VECTORIZE.upsert(vectors);
+      upserted += vectors.length;
+      console.log(`Upserted ${upserted}/${chunks.length}`);
     }
-
-    const vectors = batch.map((chunk, idx) => ({
-      id: chunk.id,
-      values: embeddings.data[idx],
-      metadata: {
-        text: chunk.text,
-        source: chunk.source,
-        title: chunk.title,
-        section: chunk.section ?? '',
-        url: chunk.url ?? '',
-        date: chunk.date ?? '',
-        dateNum: chunk.date ? Number(chunk.date.replace(/-/g, '')) : 0,
-      },
-    }));
-
-    await env.VECTORIZE.upsert(vectors);
-    upserted += vectors.length;
-    console.log(`Upserted ${upserted}/${chunks.length}`);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`Ingest failed at ${upserted}/${chunks.length}: ${message}`);
+    return Response.json({ success: false, upserted, error: message }, { status: 500 });
   }
 
   return Response.json({ success: true, upserted });
