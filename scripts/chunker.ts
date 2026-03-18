@@ -1,12 +1,4 @@
-export interface Chunk {
-  id: string;
-  text: string;
-  source: 'blog' | 'about' | 'note';
-  title: string;
-  section?: string;
-  url?: string;
-  date?: string;
-}
+export type { Chunk } from '../src/types';
 
 /**
  * Markdownを ## 見出し単位でチャンク分割する

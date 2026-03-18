@@ -1,24 +1,19 @@
 import { EMBEDDING_MODEL } from './constants';
+import type { Chunk } from './types';
 
-interface Chunk {
-  id: string;
-  text: string;
-  source: string;
-  title: string;
-  section?: string;
-  url?: string;
-  date?: string;
-}
-
-interface Env {
+interface IngestEnv {
   AI: Ai;
   VECTORIZE: VectorizeIndex;
 }
 
-const BATCH_SIZE = 10;
+const BATCH_SIZE = 100;
 
-export async function handleIngest(request: Request, env: Env): Promise<Response> {
-  const chunks: Chunk[] = await request.json();
+export async function handleIngest(request: Request, env: IngestEnv): Promise<Response> {
+  const body = await request.json();
+  if (!Array.isArray(body) || body.length === 0) {
+    return new Response('Bad Request: expected non-empty array of chunks', { status: 400 });
+  }
+  const chunks = body as Chunk[];
   console.log(`Received ${chunks.length} chunks`);
 
   let upserted = 0;
@@ -29,9 +24,20 @@ export async function handleIngest(request: Request, env: Env): Promise<Response
 
     const embeddings = await env.AI.run(EMBEDDING_MODEL, { text: texts });
 
+    if (
+      !('data' in embeddings) ||
+      !Array.isArray(embeddings.data) ||
+      embeddings.data.length === 0
+    ) {
+      return Response.json(
+        { success: false, upserted, error: 'Unexpected embedding response format' },
+        { status: 502 }
+      );
+    }
+
     const vectors = batch.map((chunk, idx) => ({
       id: chunk.id,
-      values: (embeddings as { data: number[][] }).data[idx],
+      values: embeddings.data[idx],
       metadata: {
         text: chunk.text,
         source: chunk.source,
