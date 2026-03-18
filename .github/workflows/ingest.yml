@@ -1,0 +1,38 @@
+name: Ingest blog content
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [blog-updated]
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: milkmaccya2/mm2-blog
+          path: mm2-blog
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - name: Generate chunks
+        run: npx tsx scripts/ingest.ts > /tmp/chunks.json
+        env:
+          BLOG_DIR: mm2-blog/src/content/blog
+
+      - name: Upload to Vectorize
+        run: |
+          curl -sf -X POST "$INGEST_URL" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $INGEST_SECRET" \
+            -d @/tmp/chunks.json
+        env:
+          INGEST_URL: https://chat.milkmaccya.com/ingest
+          INGEST_SECRET: ${{ secrets.INGEST_SECRET }}

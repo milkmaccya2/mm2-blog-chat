@@ -7,6 +7,7 @@ import {
   streamText,
   type UIMessage,
 } from 'ai';
+import { handleIngest } from './ingest-handler';
 import { SYSTEM_PROMPT } from './system-prompt';
 import { createTools } from './tools';
 
@@ -14,6 +15,7 @@ interface Env {
   AI: Ai;
   VECTORIZE: VectorizeIndex;
   ANTHROPIC_API_KEY: string;
+  INGEST_SECRET: string;
 }
 
 const ALLOWED_ORIGINS = [
@@ -58,6 +60,15 @@ export default {
     }
 
     const url = new URL(request.url);
+
+    if (url.pathname === '/ingest') {
+      const auth = request.headers.get('Authorization');
+      if (auth !== `Bearer ${env.INGEST_SECRET}`) {
+        return new Response('Unauthorized', { status: 401 });
+      }
+      return handleIngest(request, env);
+    }
+
     if (url.pathname !== '/chat') {
       return new Response('Not Found', { status: 404 });
     }
