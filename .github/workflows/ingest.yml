@@ -29,7 +29,7 @@ jobs:
 
       - name: Upload to Vectorize
         run: |
-          curl -sf -X POST "$INGEST_URL" \
+          curl --fail-with-body -X POST "$INGEST_URL" \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $INGEST_SECRET" \
             -d @/tmp/chunks.json
