@@ -20,7 +20,8 @@ interface Env {
 
 const ALLOWED_ORIGINS = [
   'https://blog.milkmaccya.com',
-  /^https:\/\/.*-mm2-blog\.milkmaccya2\.workers\.dev$/,
+  'http://blog.milkmaccya.com',
+  /^https?:\/\/.*-mm2-blog\.milkmaccya2\.workers\.dev$/,
   /^http:\/\/localhost:\d+$/,
 ];
 
@@ -84,8 +85,7 @@ export default {
       apiKey: env.ANTHROPIC_API_KEY,
     });
 
-    return createUIMessageStreamResponse({
-      headers: corsHeaders(origin),
+    const streamResponse = createUIMessageStreamResponse({
       stream: createUIMessageStream({
         execute: ({ writer }) => {
           const sentSourceUrls = new Set<string>();
@@ -120,6 +120,16 @@ export default {
           writer.merge(result.toUIMessageStream());
         },
       }),
+    });
+
+    const headers = new Headers(streamResponse.headers);
+    for (const [key, value] of Object.entries(corsHeaders(origin))) {
+      headers.set(key, value);
+    }
+    return new Response(streamResponse.body, {
+      status: streamResponse.status,
+      statusText: streamResponse.statusText,
+      headers,
     });
   },
 };
