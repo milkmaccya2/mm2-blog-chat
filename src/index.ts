@@ -19,8 +19,7 @@ interface Env {
 }
 
 const ALLOWED_ORIGINS = [
-  'https://blog.milkmaccya.com',
-  'http://blog.milkmaccya.com',
+  /^https?:\/\/blog\.milkmaccya\.com$/,
   /^https?:\/\/.*-mm2-blog\.milkmaccya2\.workers\.dev$/,
   /^http:\/\/localhost:\d+$/,
 ];
