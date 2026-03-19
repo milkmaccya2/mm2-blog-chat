@@ -85,7 +85,8 @@ export default {
       apiKey: env.ANTHROPIC_API_KEY,
     });
 
-    const streamResponse = createUIMessageStreamResponse({
+    return createUIMessageStreamResponse({
+      headers: corsHeaders(origin),
       stream: createUIMessageStream({
         execute: ({ writer }) => {
           const sentSourceUrls = new Set<string>();
@@ -120,16 +121,6 @@ export default {
           writer.merge(result.toUIMessageStream());
         },
       }),
-    });
-
-    const headers = new Headers(streamResponse.headers);
-    for (const [key, value] of Object.entries(corsHeaders(origin))) {
-      headers.set(key, value);
-    }
-    return new Response(streamResponse.body, {
-      status: streamResponse.status,
-      statusText: streamResponse.statusText,
-      headers,
     });
   },
 };
