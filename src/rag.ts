@@ -31,23 +31,15 @@ export async function searchRelevantChunks(
   }
   const queryVector = embedding.data[0];
 
-  const filter: VectorizeVectorMetadataFilter = {};
-  if (recentOnly) {
-    const fourWeeksAgo = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000);
-    const dateNum =
-      fourWeeksAgo.getUTCFullYear() * 10000 +
-      (fourWeeksAgo.getUTCMonth() + 1) * 100 +
-      fourWeeksAgo.getUTCDate();
-    filter.dateNum = { $gte: dateNum };
-  }
+  // recentOnly時は多めに取得してJS側でフィルタリング（Vectorizeのメタデータfilterが不安定なため）
+  const fetchTopK = recentOnly ? Math.max(topK * 3, 15) : topK;
 
   const results = await vectorize.query(queryVector, {
-    topK,
+    topK: fetchTopK,
     returnMetadata: 'all',
-    filter: Object.keys(filter).length > 0 ? filter : undefined,
   });
 
-  const mapped = results.matches.map((match) => ({
+  let mapped = results.matches.map((match) => ({
     text: (match.metadata?.text as string) ?? '',
     source: (match.metadata?.source as string) ?? '',
     title: (match.metadata?.title as string) ?? '',
@@ -57,7 +49,18 @@ export async function searchRelevantChunks(
   }));
 
   if (recentOnly) {
-    mapped.sort((a, b) => b.date.localeCompare(a.date));
+    const eightWeeksAgo = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000);
+    const cutoff =
+      eightWeeksAgo.getUTCFullYear() * 10000 +
+      (eightWeeksAgo.getUTCMonth() + 1) * 100 +
+      eightWeeksAgo.getUTCDate();
+    mapped = mapped
+      .filter((r) => {
+        const dateNum = r.date ? Number(r.date.replace(/-/g, '')) : 0;
+        return dateNum >= cutoff;
+      })
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, topK);
   }
 
   return mapped;

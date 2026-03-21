@@ -18,7 +18,7 @@ export function createTools(env: { AI: Ai; VECTORIZE: VectorizeIndex }) {
         recentOnly: z
           .boolean()
           .optional()
-          .describe('trueにすると直近4週間の記事のみに絞り込む。「最近」に関する質問で使用'),
+          .describe('trueにすると直近8週間の記事のみに絞り込む。「最近」に関する質問で使用'),
       }),
       outputSchema: z.object({
         context: z.string(),
