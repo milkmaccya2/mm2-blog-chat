@@ -18,7 +18,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.6",
+    "@biomejs/biome": "2.5.7",
     "@cloudflare/workers-types": "^4.20250313.0",
     "lefthook": "2.1.10",
     "tsx": "^4.21.0",
