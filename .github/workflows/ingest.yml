@@ -16,7 +16,7 @@ jobs:
           repository: milkmaccya2/mm2-blog
           path: mm2-blog
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
 
